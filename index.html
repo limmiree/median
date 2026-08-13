@@ -213,28 +213,24 @@
         import { getFirestore, collection, addDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global state variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'median-game-demo';
-        let firebaseConfig = null;
-        if (typeof __firebase_config !== 'undefined') {
-            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e){}
-        }
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'median-game';
         
-        if (!firebaseConfig) {
-            firebaseConfig = {
-                apiKey: "AIzaSyDemoKeyForMedianGamePublicAuth",
-                authDomain: "demo-app.firebaseapp.com",
-                projectId: "demo-app",
-                storageBucket: "demo-app.appspot.com",
-                messagingSenderId: "123456789",
-                appId: "1:123456789:web:demo"
-            };
-        }
+        // Updated User Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Vh9JNiRZM-5LsLP1aXOjbjD1FncDspo",
+            authDomain: "median-game.firebaseapp.com",
+            databaseURL: "https://median-game-default-rtdb.firebaseio.com",
+            projectId: "median-game",
+            storageBucket: "median-game.firebasestorage.app",
+            messagingSenderId: "388719433377",
+            appId: "1:388719433377:web:17249bbe883bc1279202e0"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Firestore Path (Rule 1)
+        // Firestore Path (Rule 1 Compliant)
         const heightsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'heights');
 
         // Application State
