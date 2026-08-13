@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중앙값(Median) 추리게임</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCodeJS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        .font-math {
+            font-family: 'Gowun Dodum', sans-serif;
+        }
+        .bubble-item {
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .median-highlight {
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-indigo-600 text-white shadow-md py-3 px-4 md:px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl">📊</span>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-tight">중앙값(Median) 추리게임</h1>
+                    <p class="text-indigo-200 text-xs">실시간 데이터 수집과 중앙값 개념 이해하기</p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher Tabs for Easy Testing -->
+            <div class="flex items-center bg-indigo-800/60 p-1 rounded-xl border border-indigo-400/30 text-xs font-semibold">
+                <button id="tab-teacher" class="px-3 py-1.5 rounded-lg bg-white text-indigo-900 shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-desktop"></i> 📺 교사 (메인 화면)
+                </button>
+                <button id="tab-student" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-mobile-screen-button"></i> 📱 학생 (키 입력 창)
+                </button>
+            </div>
+
+            <div id="data-count-badge" class="bg-indigo-700 px-4 py-1.5 rounded-full font-semibold text-xs md:text-sm border border-indigo-500 shadow-inner">
+                입력된 데이터: <span id="count-number" class="text-yellow-300 font-extrabold text-base md:text-lg">0</span>개
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- ================= TEACHER / MAIN DISPLAY VIEW ================= -->
+        <div id="teacher-view" class="flex flex-col gap-6">
+            
+            <!-- Top Controls & Info Bar -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                
+                <!-- 1. QR Code Panel -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+                    <h2 class="text-base font-bold text-slate-700 mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-qrcode text-indigo-500"></i> 학생 참여 QR 코드
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-3">스마트폰 스캔 또는 오른쪽 상단 [학생] 버튼 클릭</p>
+                    
+                    <!-- QR Box -->
+                    <div id="qrcode-container" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center min-h-[150px] min-w-[150px]">
+                        <!-- QR Image rendered here -->
+                    </div>
+
+                    <p class="text-[11px] text-slate-400 mt-2 truncate max-w-full px-2" id="qr-url-text"></p>
+                    
+                    <!-- Fallback / Direct Link Button -->
+                    <button id="btn-copy-link" class="mt-2 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold py-1 px-3 rounded-lg border border-indigo-200 transition flex items-center gap-1">
+                        <i class="fa-solid fa-link"></i> 학생 입력창 직접 이동
+                    </button>
+                </div>
+
+                <!-- Control Panel & Manual Input -->
+                <div class="lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-700 mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-gamepad text-indigo-500"></i> 게임 컨트롤러
+                        </h2>
+                        <p class="text-xs md:text-sm text-slate-500">데이터를 수집한 후 버튼을 순서대로 눌러 중앙값을 찾아보세요.</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button id="btn-sort" class="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow transition transform active:scale-95">
+                            <i class="fa-solid fa-arrow-down-short-wide"></i> 2. 크기 순 정렬
+                        </button>
+
+                        <button id="btn-median" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow transition transform active:scale-95">
+                            <i class="fa-solid fa-bullseye"></i> 3. 가운데 위치한 값
+                        </button>
+
+                        <button id="btn-reset" class="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-xl shadow transition transform active:scale-95">
+                            <i class="fa-solid fa-rotate-right"></i> 5. 리셋
+                        </button>
+                    </div>
+
+                    <!-- Quick Manual Entry -->
+                    <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-500 whitespace-nowrap">선생님 직접 입력:</span>
+                        <input type="number" id="manual-height-input" placeholder="예: 165" class="w-28 px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <button id="btn-manual-add" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
+                            추가
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notice & Explanation Callout Box -->
+            <div id="explanation-box" class="hidden bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl shadow-sm text-slate-700">
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-lightbulb text-amber-500 text-xl mt-0.5"></i>
+                    <div>
+                        <h3 id="explanation-title" class="font-bold text-amber-900 text-base">중앙값 분석 결과</h3>
+                        <p id="explanation-body" class="text-sm mt-1 leading-relaxed text-amber-800"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Display Canvas / Word Cloud Container -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 min-h-[380px] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-cloud text-indigo-500"></i>
+                        <span id="display-mode-title">실시간 키(cm) 데이터 워드클라우드</span>
+                    </h2>
+                    <span id="mode-badge" class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full font-medium">
+                        자유 상태 (워드클라우드)
+                    </span>
+                </div>
+
+                <!-- Dynamic Data Area -->
+                <div id="cloud-container" class="flex-1 border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-wrap items-center justify-center gap-3 relative overflow-hidden bg-slate-50/50 min-h-[300px]">
+                    <div id="empty-state" class="text-center text-slate-400 my-auto">
+                        <i class="fa-solid fa-chart-line text-4xl mb-2 text-slate-300 block"></i>
+                        학생들이 QR 코드를 스캔하거나 '학생 입력 창'에서 키를 입력하면 이곳에 나타납니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= STUDENT MOBILE INPUT VIEW ================= -->
+        <div id="student-view" class="hidden max-w-md mx-auto w-full my-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl border border-slate-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-3xl mb-3 shadow-inner">
+                    📏
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">내 키 입력하기</h2>
+                <p class="text-xs text-slate-500 mt-1">입력한 키는 교실 화면에 실시간 무기명으로 표시됩니다.</p>
+            </div>
+
+            <form id="student-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">키 (cm 단위)</label>
+                    <div class="relative">
+                        <input type="number" id="student-height-input" min="100" max="220" step="0.1" required placeholder="예: 162.5" class="w-full text-center text-3xl font-extrabold py-3.5 px-4 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:outline-none transition shadow-sm text-indigo-900">
+                        <span class="absolute right-4 top-4 text-slate-400 font-bold text-lg">cm</span>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-student-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition transform active:scale-95 text-lg flex items-center justify-center gap-2">
+                    <span>제출하기</span> 🚀
+                </button>
+            </form>
+
+            <div id="student-success-message" class="hidden mt-6 bg-emerald-50 border border-emerald-200 text-emerald-800 p-5 rounded-xl text-center">
+                <i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2 block"></i>
+                <p class="font-bold text-lg">키가 성공적으로 전달되었습니다!</p>
+                <p class="text-xs text-emerald-600 mt-1">교실 칠판 화면을 확인해보세요.</p>
+                
+                <button id="btn-reentry" class="mt-4 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition shadow">
+                    <i class="fa-solid fa-plus"></i> 다른 키 추가 입력하기
+                </button>
+            </div>
+
+            <div class="mt-8 pt-4 border-t border-slate-100 text-center">
+                <button id="btn-back-to-teacher" class="text-xs text-slate-400 hover:text-slate-600 underline">
+                    📺 교사 메인 화면으로 돌아가기
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 z-50">
+        <i class="fa-solid fa-circle-info text-indigo-400"></i>
+        <span id="toast-message">메시지</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global state variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'median-game-demo';
+        let firebaseConfig = null;
+        if (typeof __firebase_config !== 'undefined') {
+            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e){}
+        }
+        
+        if (!firebaseConfig) {
+            firebaseConfig = {
+                apiKey: "AIzaSyDemoKeyForMedianGamePublicAuth",
+                authDomain: "demo-app.firebaseapp.com",
+                projectId: "demo-app",
+                storageBucket: "demo-app.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:demo"
+            };
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Firestore Path (Rule 1)
+        const heightsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'heights');
+
+        // Application State
+        let rawData = [];
+        let currentMode = 'cloud'; // 'cloud', 'sorted', 'median'
+        let currentRole = 'teacher'; // 'teacher', 'student'
+
+        // UI Element References
+        const teacherView = document.getElementById('teacher-view');
+        const studentView = document.getElementById('student-view');
+        const tabTeacher = document.getElementById('tab-teacher');
+        const tabStudent = document.getElementById('tab-student');
+        const cloudContainer = document.getElementById('cloud-container');
+        const emptyState = document.getElementById('empty-state');
+        const countNumber = document.getElementById('count-number');
+        const displayModeTitle = document.getElementById('display-mode-title');
+        const modeBadge = document.getElementById('mode-badge');
+        const explanationBox = document.getElementById('explanation-box');
+        const explanationTitle = document.getElementById('explanation-title');
+        const explanationBody = document.getElementById('explanation-body');
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        const bgColors = [
+            'bg-indigo-100 border-indigo-300 text-indigo-800',
+            'bg-emerald-100 border-emerald-300 text-emerald-800',
+            'bg-amber-100 border-amber-300 text-amber-800',
+            'bg-sky-100 border-sky-300 text-sky-800',
+            'bg-rose-100 border-rose-300 text-rose-800',
+            'bg-purple-100 border-purple-300 text-purple-800',
+            'bg-teal-100 border-teal-300 text-teal-800'
+        ];
+
+        function switchRole(role) {
+            currentRole = role;
+            if (role === 'student') {
+                teacherView.classList.add('hidden');
+                studentView.classList.remove('hidden');
+                tabStudent.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-900 shadow transition flex items-center gap-1.5";
+                tabTeacher.className = "px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1.5";
+                document.getElementById('student-height-input').focus();
+            } else {
+                teacherView.classList.remove('hidden');
+                studentView.classList.add('hidden');
+                tabTeacher.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-900 shadow transition flex items-center gap-1.5";
+                tabStudent.className = "px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition flex items-center gap-1.5";
+                generateQRCode();
+            }
+        }
+
+        tabTeacher.addEventListener('click', () => switchRole('teacher'));
+        tabStudent.addEventListener('click', () => switchRole('student'));
+        document.getElementById('btn-copy-link').addEventListener('click', () => switchRole('student'));
+        document.getElementById('btn-back-to-teacher').addEventListener('click', () => switchRole('teacher'));
+
+        // Initialize Auth (Rule 3)
+        async function startAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth fallback active:", err);
+            }
+        }
+
+        function generateQRCode() {
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = '';
+            
+            let studentUrl;
+            try {
+                studentUrl = new URL(window.location.href);
+                studentUrl.searchParams.set('role', 'student');
+            } catch(e) {
+                studentUrl = window.location.href;
+            }
+
+            document.getElementById('qr-url-text').innerText = studentUrl.toString();
+
+            new QRCode(qrContainer, {
+                text: studentUrl.toString(),
+                width: 130,
+                height: 130,
+                colorDark : "#1e293b",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+        }
+
+        function setupRealtimeListener() {
+            onSnapshot(heightsCollectionRef, (snapshot) => {
+                rawData = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data && typeof data.value === 'number') {
+                        rawData.push({ id: docSnap.id, value: data.value });
+                    }
+                });
+
+                countNumber.innerText = rawData.length;
+                renderDataView();
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+            });
+        }
+
+        function renderDataView() {
+            cloudContainer.innerHTML = '';
+
+            if (rawData.length === 0) {
+                cloudContainer.appendChild(emptyState);
+                explanationBox.classList.add('hidden');
+                return;
+            }
+
+            if (currentMode === 'cloud') {
+                displayModeTitle.innerText = "실시간 키(cm) 데이터 워드클라우드";
+                modeBadge.innerText = "자유 상태 (워드클라우드)";
+                modeBadge.className = "text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full font-medium";
+                explanationBox.classList.add('hidden');
+
+                rawData.forEach((item, idx) => {
+                    const bubble = document.createElement('div');
+                    const colorClass = bgColors[idx % bgColors.length];
+                    const randomRotate = (idx % 2 === 0 ? 1 : -1) * ((idx * 7) % 12);
+                    
+                    bubble.className = `bubble-item px-4 py-2.5 rounded-2xl border-2 font-bold text-lg shadow-sm ${colorClass} hover:scale-110 transition`;
+                    bubble.style.transform = `rotate(${randomRotate}deg)`;
+                    bubble.innerText = `${item.value} cm`;
+                    cloudContainer.appendChild(bubble);
+                });
+
+            } else if (currentMode === 'sorted' || currentMode === 'median') {
+                displayModeTitle.innerText = "크기순으로 정렬된 데이터";
+                modeBadge.innerText = "정렬 상태";
+                modeBadge.className = "text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full font-medium";
+
+                const sortedData = [...rawData].sort((a, b) => a.value - b.value);
+                const n = sortedData.length;
+
+                let medianIndices = [];
+                if (currentMode === 'median') {
+                    if (n % 2 === 1) {
+                        medianIndices.push(Math.floor(n / 2));
+                    } else {
+                        medianIndices.push((n / 2) - 1);
+                        medianIndices.push(n / 2);
+                    }
+                }
+
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex flex-wrap items-center justify-center gap-3 w-full py-4";
+
+                sortedData.forEach((item, index) => {
+                    const isMedian = currentMode === 'median' && medianIndices.includes(index);
+                    const card = document.createElement('div');
+                    
+                    let bgStyle = "bg-white border-slate-300 text-slate-800";
+                    let medianClass = "";
+
+                    if (isMedian) {
+                        bgStyle = "bg-red-500 border-red-600 text-white font-extrabold scale-110 z-10 shadow-lg";
+                        medianClass = "median-highlight ring-4 ring-red-300 ring-offset-2";
+                    }
+
+                    card.className = `bubble-item relative flex flex-col items-center justify-center px-4 py-3 rounded-xl border-2 text-lg font-bold transition-all duration-500 ${bgStyle} ${medianClass}`;
+                    
+                    card.innerHTML = `
+                        <span class="text-[10px] ${isMedian ? 'text-red-100' : 'text-slate-400'} font-normal mb-0.5">${index + 1}번째</span>
+                        <span>${item.value} <span class="text-xs font-normal">cm</span></span>
+                    `;
+
+                    wrapper.appendChild(card);
+                });
+
+                cloudContainer.appendChild(wrapper);
+
+                if (currentMode === 'median') {
+                    explanationBox.classList.remove('hidden');
+                    if (n % 2 === 1) {
+                        const medVal = sortedData[medianIndices[0]].value;
+                        explanationTitle.innerText = `홀수 개 자료 (${n}개)의 중앙값`;
+                        explanationBody.innerHTML = `전체 자료의 개수가 <strong>${n}개(홀수)</strong>이므로, 정확히 한가운데 위치한 <strong>${medianIndices[0] + 1}번째 값(${medVal}cm)</strong>이 중앙값입니다.`;
+                    } else {
+                        const val1 = sortedData[medianIndices[0]].value;
+                        const val2 = sortedData[medianIndices[1]].value;
+                        const avg = ((val1 + val2) / 2).toFixed(1);
+                        explanationTitle.innerText = `짝수 개 자료 (${n}개)의 중앙값`;
+                        explanationBody.innerHTML = `전체 자료의 개수가 <strong>${n}개(짝수)</strong>이므로, 한가운데 위치한 두 값인 <strong>${medianIndices[0] + 1}번째(${val1}cm)</strong>와 <strong>${medianIndices[1] + 1}번째(${val2}cm)</strong>의 평균인 <strong class="text-red-600 underline text-base">${avg}cm</strong>가 중앙값입니다!`;
+                    }
+                } else {
+                    explanationBox.classList.add('hidden');
+                }
+            }
+        }
+
+        document.getElementById('btn-sort').addEventListener('click', () => {
+            if (rawData.length === 0) {
+                showToast("입력된 데이터가 없습니다. 먼저 키를 입력해주세요!");
+                return;
+            }
+            currentMode = 'sorted';
+            renderDataView();
+            showToast("데이터가 크기 순으로 정렬되었습니다!");
+        });
+
+        document.getElementById('btn-median').addEventListener('click', () => {
+            if (rawData.length === 0) {
+                showToast("입력된 데이터가 없습니다. 먼저 키를 입력해주세요!");
+                return;
+            }
+            currentMode = 'median';
+            renderDataView();
+            showToast(rawData.length % 2 === 1 ? "홀수 개 자료: 가운데 위치한 1개 값에 동그라미!" : "짝수 개 자료: 가운데 위치한 2개 값에 동그라미!");
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', async () => {
+            if (rawData.length === 0) return;
+            
+            try {
+                const snapshot = await getDocs(heightsCollectionRef);
+                const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+                await Promise.all(deletePromises);
+                
+                currentMode = 'cloud';
+                showToast("모든 데이터가 초기화되었습니다.");
+            } catch (err) {
+                console.error("Reset error:", err);
+                showToast("초기화 중 오류가 발생했습니다.");
+            }
+        });
+
+        document.getElementById('btn-manual-add').addEventListener('click', async () => {
+            const input = document.getElementById('manual-height-input');
+            const val = parseFloat(input.value);
+            if (!val || val < 50 || val > 250) {
+                showToast("올바른 키(cm) 값을 입력해주세요.");
+                return;
+            }
+            try {
+                await addDoc(heightsCollectionRef, { value: val, createdAt: Date.now() });
+                input.value = '';
+                showToast(`${val}cm 가 추가되었습니다.`);
+            } catch(e) {
+                console.error(e);
+            }
+        });
+
+        document.getElementById('student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('student-height-input');
+            const val = parseFloat(input.value);
+
+            if (!val || val < 50 || val > 250) {
+                showToast("올바른 키(cm) 값을 입력해주세요.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-student-submit');
+            btn.disabled = true;
+            btn.innerHTML = `<span>제출 중...</span> <i class="fa-solid fa-spinner animate-spin"></i>`;
+
+            try {
+                await addDoc(heightsCollectionRef, { value: val, createdAt: Date.now() });
+                
+                document.getElementById('student-form').classList.add('hidden');
+                document.getElementById('student-success-message').classList.remove('hidden');
+            } catch (err) {
+                console.error("Submission failed:", err);
+                showToast("제출 실패. 다시 시도해주세요.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>제출하기</span> 🚀`;
+            }
+        });
+
+        document.getElementById('btn-reentry').addEventListener('click', () => {
+            document.getElementById('student-form').reset();
+            document.getElementById('student-form').classList.remove('hidden');
+            document.getElementById('student-success-message').classList.add('hidden');
+            document.getElementById('student-height-input').focus();
+        });
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('role') === 'student') {
+                switchRole('student');
+            } else {
+                switchRole('teacher');
+            }
+            
+            await startAuth();
+            setupRealtimeListener();
+        });
+    </script>
+</body>
+</html>
