@@ -504,13 +504,20 @@
             btn.innerHTML = `<span>제출 중...</span> <i class="fa-solid fa-spinner animate-spin"></i>`;
 
             try {
-                await addDoc(heightsCollectionRef, { value: val, createdAt: Date.now() });
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("응답 시간 초과. Firebase Firestore 규칙을 확인해주세요.")), 5000)
+                );
+
+                await Promise.race([
+                    addDoc(heightsCollectionRef, { value: val, createdAt: Date.now() }),
+                    timeoutPromise
+                ]);
                 
                 document.getElementById('student-form').classList.add('hidden');
                 document.getElementById('student-success-message').classList.remove('hidden');
             } catch (err) {
                 console.error("Submission failed:", err);
-                showToast("제출 실패. 다시 시도해주세요.");
+                showToast("제출 실패! 파이어베이스 Firestore 규칙(Rules)을 확인해주세요.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span>제출하기</span> 🚀`;
@@ -518,6 +525,10 @@
         });
 
         document.getElementById('btn-reentry').addEventListener('click', () => {
+            const btn = document.getElementById('btn-student-submit');
+            btn.disabled = false;
+            btn.innerHTML = `<span>제출하기</span> 🚀`;
+
             document.getElementById('student-form').reset();
             document.getElementById('student-form').classList.remove('hidden');
             document.getElementById('student-success-message').classList.add('hidden');
